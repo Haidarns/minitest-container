@@ -1,0 +1,34 @@
+---
+- vars:
+    ansible_connection: ssh
+    ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+    ansible_ssh_user: haidarns
+    ansible_ssh_pass: haidarns
+    ansible_sudo_pass: haidarns
+
+    topology: "single,3"
+
+  hosts: mininet
+
+  sudo: True
+
+  strategy: debug
+
+  tasks:
+    - name: Testing Mininet
+      expect:
+        command: mn --topo {{ topology }}
+        responses:
+          "mininet>":
+            - "pingall"
+            - "h1 ping h2 -c1"
+            - "iperf h1 h2"
+            - "exit"
+      register: mininet_results
+      
+    - name: Parsing minitest results
+      vars:
+        minitest_latency: "{{ mininet_results.stdout | regex_findall('(?<=time=).*?(?=\\r)') }}"
+        minitest_iperf: "{{ mininet_results.stdout | regex_findall('(?<=Results: ).*?(?=\\r)') }}"
+      debug:
+        msg: "Latency: {{ minitest_latency[0] }}, Bandwidth: {{ minitest_iperf[1] }}"
